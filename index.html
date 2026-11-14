@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#04060b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Moon Tonight">
+<title>Moon Tonight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: one centred column — the moon first, then its two next events side by side. Single night theme by choice. */
+:root {
+  --sky: #04060b;
+  --panel: rgba(14, 18, 30, 0.72);
+  --line: #1c2335;
+  --moon: #f0e9d6;
+  --muted: #8e97b3;
+  --gold: #e2c27d;
+  --display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: var(--body);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: radial-gradient(ellipse at 50% 0%, #0b1020 0%, #070a13 45%, var(--sky) 80%) fixed;
+  background-color: var(--sky);
+  color: var(--moon);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+#sky { position: fixed; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 0; }
+main {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 20px 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.now span { white-space: nowrap; }
+.now {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-align: center;
+}
+.moon-wrap { width: min(260px, 70vw); aspect-ratio: 1; }
+.moon-wrap { position: relative; border-radius: 50%; box-shadow: 0 0 var(--glow, 40px) rgba(240,233,214,var(--glowa, .12)); }
+.moon-wrap { position: relative; }
+.moon-wrap > canvas { width: 100%; height: 100%; display: block; }
+.globe { position: absolute; inset: 0; }
+.globe canvas { display: block; }
+.spin { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; min-height: 32px; margin-top: -12px; }
+.hint { font-size: 13px; color: var(--muted); }
+.btn {
+  font: 500 13px/1 var(--body); color: var(--gold); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer;
+}
+.btn:hover { border-color: var(--gold); }
+.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.moon-wrap.photo { box-shadow: none; width: min(340px, 86vw); }
+.moon-wrap img { width: 100%; height: 100%; display: block; object-fit: contain; mix-blend-mode: screen; }
+.credit { font-size: 12px; color: var(--muted); }
+.credit a { color: var(--gold); }
+.phase { text-align: center; display: flex; flex-direction: column; gap: 6px; }
+h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(40px, 9vw, 56px);
+  line-height: 1.05;
+  margin: 0;
+  text-wrap: balance;
+}
+.facts { color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; }
+.facts b { color: var(--moon); font-weight: 500; }
+.meaning { font-size: 13px; color: var(--muted); opacity: 0.85; max-width: 40ch; margin: 2px auto 0; text-wrap: balance; }
+.meaning em { font-style: normal; color: var(--gold); }
+.cycle { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.track { position: relative; height: 2px; background: var(--line); border-radius: 2px; }
+.track .fill { position: absolute; inset: 0 auto 0 0; background: var(--gold); border-radius: 2px; }
+.track .dot {
+  position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px;
+  border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px #e2c27d99;
+}
+.ticks { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.cards { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 18px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.card .label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.card .label i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.card.full .label i { background: var(--moon); box-shadow: 0 0 8px #f0e9d6aa; }
+.card.new .label i { background: var(--sky); border: 1px solid var(--muted); }
+.card .date { font-family: var(--display); font-size: 28px; line-height: 1.15; }
+.card .time { font-family: var(--mono); font-size: 14px; }
+.card .in {
+  margin-top: 8px; align-self: flex-start;
+  font-size: 13px; color: var(--sky); background: var(--gold);
+  padding: 2px 10px; border-radius: 999px; font-variant-numeric: tabular-nums;
+}
+.card.new .in { background: transparent; color: var(--gold); border: 1px solid var(--gold); }
+.note { font-size: 12px; color: var(--muted); text-align: center; max-width: 46ch; }
+.cal { width: 100%; display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.cal-head h2 { white-space: nowrap; }
+.btn { white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.cal-head h2 { font-family: var(--display); font-weight: 400; font-size: 30px; margin: 0; }
+.cal-nav { display: flex; gap: 8px; }
+.cal-nav .btn { min-width: 36px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.dow { font-size: 11px; color: var(--muted); text-align: center; letter-spacing: 0.04em; padding-bottom: 2px; }
+.day {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 2px 6px; min-height: 84px; cursor: pointer; color: var(--moon); font: inherit;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+}
+.day:hover { border-color: #3a4566; }
+.day:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.day .num { align-self: flex-start; padding-left: 5px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; }
+.day .mini { width: 60%; max-width: 40px; aspect-ratio: 1; height: auto; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(240, 233, 214, 0.1), 0 0 0 1px rgba(240, 233, 214, 0.06); }
+.day .tag { font-size: 10px; line-height: 1.2; color: var(--gold); text-align: center; min-height: 12px; white-space: nowrap; }
+.day { -webkit-tap-highlight-color: transparent; min-width: 0; }
+.day.ev-full .tag { color: var(--moon); }
+.day.today { border-color: var(--gold); }
+.day.today .num { color: var(--gold); font-weight: 500; }
+.day.sel { background: #161d30; box-shadow: inset 0 0 0 1px #4a557a; }
+.day.today.sel { box-shadow: inset 0 0 0 1px var(--gold); }
+.cal-info { font-size: 14px; color: var(--muted); text-align: center; min-height: 21px; }
+.cal-info b { color: var(--moon); font-weight: 500; white-space: nowrap; }
+.cal-info .nw { white-space: nowrap; }
+@media (max-width: 560px) { .day .tag .t { display: none; } .day { min-height: 70px; } .cal-grid { gap: 4px; } }
+@media (max-width: 420px) {
+  main { padding: 28px 14px 44px; gap: 24px; }
+  .now .sep { display: none; }
+  .now span { display: block; }
+  .cal-head h2 { font-size: 25px; }
+  .cal-nav .btn { padding: 8px 11px; }
+  .day { min-height: 62px; padding: 5px 1px; border-radius: 8px; }
+  .day .num { font-size: 11px; padding-left: 4px; }
+  .day .mini { width: 66%; }
+  .day .tag { font-size: 9px; }
+  .dow { font-size: 10px; }
+  .card { padding: 16px; }
+  .card .date { font-size: 26px; }
+}
+@media (max-width: 340px) { .cal-grid { gap: 3px; } .day .tag { font-size: 8px; letter-spacing: -0.01em; } }
+@media (max-width: 420px) { .cards { grid-template-columns: 1fr; } }
+/* ---- Almanac layout (v2) ---- */
+main { max-width: 1080px; padding: 28px 24px 56px; gap: 40px; align-items: stretch; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 16px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.brand { font-family: var(--display); font-size: 22px; letter-spacing: 0.01em; }
+.now { font-family: var(--body); font-size: 13px; letter-spacing: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.hero { display: grid; grid-template-columns: 1fr; gap: 28px; align-items: center; justify-items: center; }
+.hero-moon { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.moon-wrap { width: min(300px, 74vw); }
+.moon-wrap.photo { width: min(340px, 86vw); }
+.spin { margin-top: 0; }
+.hero-info { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 10px; text-align: center; }
+.hero-info h1 { font-size: clamp(42px, 9vw, 64px); }
+.meaning { margin: 4px auto 0; }
+.btn { color: var(--moon); }
+.btn:hover { border-color: rgba(240, 233, 214, 0.4); }
+
+/* cycle timeline: phases at their true positions */
+.cycle { padding: 34px 6px 0; margin-top: 8px; }
+.cyc-track { position: relative; height: 2px; background: var(--line); border-radius: 2px; }
+.cyc-fill { position: absolute; inset: 0 auto 0 0; background: rgba(240, 233, 214, 0.4); border-radius: 2px; }
+.mk { position: absolute; top: 50%; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; border: 1px solid var(--moon); background: var(--sky); }
+.mk-full { background: var(--moon); }
+.mk-first { background: linear-gradient(90deg, var(--sky) 50%, var(--moon) 50%); }
+.mk-last { background: linear-gradient(90deg, var(--moon) 50%, var(--sky) 50%); }
+.mk.past { opacity: 0.5; }
+.cyc-now { position: absolute; top: 50%; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 4px rgba(226, 194, 125, 0.16), 0 0 12px rgba(226, 194, 125, 0.55); z-index: 2; }
+.cyc-now i { position: absolute; bottom: 17px; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); }
+.cyc-labels { position: relative; height: 36px; margin-top: 12px; }
+.lb { position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; font-size: 12px; line-height: 1.35; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lb b { font-weight: 500; color: var(--moon); }
+.lb.past b { color: var(--muted); }
+.lb.first { transform: none; align-items: flex-start; }
+.lb.last { transform: translateX(-100%); align-items: flex-end; }
+
+/* next events: typographic blocks, no boxes */
+.cards { grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--line); margin-top: 18px; }
+.card { background: none; border: 0; border-radius: 0; padding: 16px 0 0; text-align: left; gap: 2px; }
+.card + .card { border-left: 1px solid var(--line); padding-left: 20px; }
+.card .label { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+.card .label { white-space: nowrap; }
+@media (max-width: 360px) { .card .label { font-size: 11px; letter-spacing: 0.02em; gap: 6px; } }
+.card .date { font-size: 30px; }
+.card .time { font-family: var(--body); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.card .in, .card.new .in { margin-top: 6px; background: none; border: 0; border-radius: 0; padding: 0; color: var(--gold); font-size: 13px; }
+
+/* calendar: open grid, moons do the talking */
+.cal { max-width: 860px; margin: 0 auto; gap: 14px; border-top: 1px solid var(--line); padding-top: 28px; }
+.cal-grid { gap: 2px; }
+.day { background: none; border: 0; border-radius: 12px; min-height: 84px; padding: 6px 2px; gap: 3px; }
+.day:hover { background: rgba(240, 233, 214, 0.04); }
+.day .num { font-size: 12px; }
+.day .mini { width: 60%; max-width: 40px; box-shadow: inset 0 0 0 1px rgba(240, 233, 214, 0.1), 0 0 0 1px rgba(240, 233, 214, 0.06); }
+.day.today { border: 0; }
+.day.sel, .day.today.sel { background: rgba(240, 233, 214, 0.06); box-shadow: none; }
+.day .tag, .day.ev-full .tag { color: var(--moon); opacity: 0.85; }
+.day.ev .tag { font-weight: 500; opacity: 1; }
+
+.foot { display: flex; flex-direction: column; align-items: center; gap: 6px; border-top: 1px solid var(--line); padding-top: 22px; }
+.note { max-width: 62ch; }
+
+@media (min-width: 880px) {
+  main { padding: 32px 40px 64px; gap: 48px; }
+  .hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 56px; justify-items: stretch; }
+  .moon-wrap { width: min(440px, 38vw); }
+  .moon-wrap.photo { width: min(460px, 40vw); }
+  .hero-info { text-align: left; max-width: none; }
+  .meaning { margin: 4px 0 0; }
+}
+@media (max-width: 420px) {
+  main { padding: 20px 16px 44px; gap: 30px; }
+  .top { flex-direction: column; align-items: center; text-align: center; }
+  .now { text-align: center; }
+  .cards { grid-template-columns: 1fr 1fr; }
+  .card { padding: 14px 0 0; }
+  .card + .card { padding-left: 14px; }
+  .card .date { font-size: 23px; }
+  .card .time { font-size: 13px; }
+  .lb { font-size: 11px; }
+  .day { min-height: 64px; padding: 6px 1px; }
+}
+/* calendar grid lines (wall-calendar style) */
+.cal-dows { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-bottom: -6px; }
+.cal-grid { gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.cal-grid > .day, .cal-grid > .blank { background: #0b0f19; border-radius: 0; }
+.cal-grid > .blank { background: #080b13; }
+.day:hover { background: #0f1422; }
+.day.sel, .day.today.sel { background: #151c2e; }
+.cal-grid > .day.today { box-shadow: inset 0 0 0 1.5px var(--gold); }
+@media (max-width: 560px) { .cal-grid { gap: 1px; } }
+@media (max-width: 340px) { .cal-grid { gap: 1px; } }
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<main>
+  <header class="top">
+    <span class="brand">Moon Tonight</span>
+    <div class="now" id="now">India Standard Time</div>
+  </header>
+  <section class="hero">
+    <div class="hero-moon">
+    <div class="moon-wrap" id="wrap"><div class="globe" id="globe"></div><img id="photo" alt="The Moon as it looks right now, from NASA" hidden><canvas id="moon" aria-hidden="true"></canvas></div>
+    <div class="spin" id="spin" hidden>
+      <span class="hint">Drag the moon to spin it</span>
+      <button class="btn" id="reset" type="button" hidden>Back to tonight's view</button>
+      <button class="btn" id="photoBtn" type="button" hidden>Show NASA photo</button>
+    </div>
+    </div>
+    <div class="hero-info">
+      <h1 id="name">Moon</h1>
+      <div class="facts" id="facts"></div>
+      <div class="meaning" id="meaning"></div>
+      <div class="cycle" id="cycle" aria-label="This lunar cycle, with tonight marked"></div>
+      <div class="cards" id="cards"></div>
+    </div>
+  </section>
+  <section class="cal" aria-label="Moon calendar">
+    <div class="cal-head">
+      <h2 id="calTitle">Calendar</h2>
+      <div class="cal-nav">
+        <button class="btn" id="calToday" type="button" hidden>This month</button>
+        <button class="btn" id="calPrev" type="button" aria-label="Previous month">‹</button>
+        <button class="btn" id="calNext" type="button" aria-label="Next month">›</button>
+      </div>
+    </div>
+    <div class="cal-dows" id="calDows"></div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-info" id="calInfo" aria-live="polite"></div>
+  </section>
+  <footer class="foot">
+    <p class="credit" id="credit" hidden>Moon image: <a href="https://svs.gsfc.nasa.gov/gallery/moonphase/">NASA Scientific Visualization Studio</a>, updated hourly</p>
+    <p class="note">Times are in India Standard Time (IST) and match observatory figures to within a minute. The 3D moon is lit the way the sun lights it tonight.<span id="photoNote" hidden> Tap Show NASA photo, under the moon, to see NASA's real image for the current hour.</span> Calendar moons show each day's moon at 8 pm IST.</p>
+  </footer>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// Moon phase maths (Jean Meeus, "Astronomical Algorithms", ch. 48 & 49).
+// Pure functions, no dependencies. Times are JS Date objects (UTC inside).
+
+const RAD = Math.PI / 180;
+const SYNODIC = 29.530588861;
+const DELTA_T_DAYS = 69 / 86400; // TT − UT, about 69 s in the 2020s
+
+const toJD = (date) => date.getTime() / 86400000 + 2440587.5;
+const fromJD = (jd) => new Date((jd - 2440587.5) * 86400000);
+const norm = (deg) => ((deg % 360) + 360) % 360;
+
+// Exact time of a new moon (frac 0) or full moon (frac 0.5) for lunation k.
+function phaseTime(k, frac) {
+  k = k + frac;
+  const T = k / 1236.85, T2 = T * T, T3 = T2 * T, T4 = T3 * T;
+  let jde = 2451550.09766 + 29.530588861 * k + 0.00015437 * T2 - 0.00000015 * T3 + 0.00000000073 * T4;
+  const E = 1 - 0.002516 * T - 0.0000074 * T2;
+  const M = norm(2.5534 + 29.1053567 * k - 0.0000014 * T2 - 0.00000011 * T3) * RAD;
+  const Mp = norm(201.5643 + 385.81693528 * k + 0.0107582 * T2 + 0.00001238 * T3 - 0.000000058 * T4) * RAD;
+  const F = norm(160.7108 + 390.67050284 * k - 0.0016118 * T2 - 0.00000227 * T3 + 0.000000011 * T4) * RAD;
+  const O = norm(124.7746 - 1.56375588 * k + 0.0020672 * T2 + 0.00000215 * T3) * RAD;
+  const s = Math.sin;
+  const isNew = frac === 0;
+  let c = (isNew ? -0.4072 : -0.40614) * s(Mp)
+    + (isNew ? 0.17241 : 0.17302) * E * s(M)
+    + (isNew ? 0.01608 : 0.01614) * s(2 * Mp)
+    + (isNew ? 0.01039 : 0.01043) * s(2 * F)
+    + (isNew ? 0.00739 : 0.00734) * E * s(Mp - M)
+    + (isNew ? -0.00514 : -0.00515) * E * s(Mp + M)
+    + (isNew ? 0.00208 : 0.00209) * E * E * s(2 * M)
+    - 0.00111 * s(Mp - 2 * F) - 0.00057 * s(Mp + 2 * F)
+    + 0.00056 * E * s(2 * Mp + M) - 0.00042 * s(3 * Mp)
+    + 0.00042 * E * s(M + 2 * F) + 0.00038 * E * s(M - 2 * F)
+    - 0.00024 * E * s(2 * Mp - M) - 0.00017 * s(O)
+    - 0.00007 * s(Mp + 2 * M) + 0.00004 * s(2 * Mp - 2 * F)
+    + 0.00004 * s(3 * M) + 0.00003 * s(Mp + M - 2 * F)
+    + 0.00003 * s(2 * Mp + 2 * F) - 0.00003 * s(Mp + M + 2 * F)
+    + 0.00003 * s(Mp - M + 2 * F) - 0.00002 * s(Mp - M - 2 * F)
+    - 0.00002 * s(3 * Mp + M) + 0.00002 * s(4 * Mp);
+  // Planetary corrections
+  const A = [
+    299.77 + 0.107408 * k - 0.009173 * T2, 251.88 + 0.016321 * k, 251.83 + 26.651886 * k,
+    349.42 + 36.412478 * k, 84.66 + 18.206239 * k, 141.74 + 53.303771 * k,
+    207.14 + 2.453732 * k, 154.84 + 7.30686 * k, 34.52 + 27.261239 * k,
+    207.19 + 0.121824 * k, 291.34 + 1.844379 * k, 161.72 + 24.198154 * k,
+    239.56 + 25.513099 * k, 331.55 + 3.592518 * k,
+  ];
+  const W = [325, 165, 164, 126, 110, 62, 60, 56, 47, 42, 40, 37, 35, 23];
+  for (let i = 0; i < 14; i++) c += W[i] * 1e-6 * s(A[i] * RAD);
+  return fromJD(jde + c - DELTA_T_DAYS);
+}
+
+// Next event of the given kind ("new" or "full") strictly after `after`.
+function nextPhase(kind, after = new Date()) {
+  const frac = kind === "full" ? 0.5 : 0;
+  const t = after.getTime();
+  let k = Math.floor((toJD(after) - 2451550.09766) / SYNODIC) - 2;
+  for (;;) {
+    const d = phaseTime(k, frac);
+    if (d.getTime() > t) return d;
+    k++;
+  }
+}
+
+function previousNewMoon(before = new Date()) {
+  const t = before.getTime();
+  let k = Math.floor((toJD(before) - 2451550.09766) / SYNODIC) + 2;
+  for (;;) {
+    const d = phaseTime(k, 0);
+    if (d.getTime() <= t) return d;
+    k--;
+  }
+}
+
+// Fraction of the disc lit right now (0–1), Meeus ch. 48 low-precision form.
+function illumination(date = new Date()) {
+  const T = (toJD(date) + DELTA_T_DAYS - 2451545) / 36525;
+  const D = norm(297.8501921 + 445267.1114034 * T - 0.0018819 * T * T) * RAD;
+  const M = norm(357.5291092 + 35999.0502909 * T - 0.0001536 * T * T) * RAD;
+  const Mp = norm(134.9633964 + 477198.8675055 * T + 0.0087414 * T * T) * RAD;
+  const i = 180 - D / RAD
+    - 6.289 * Math.sin(Mp) + 2.1 * Math.sin(M)
+    - 1.274 * Math.sin(2 * D - Mp) - 0.658 * Math.sin(2 * D)
+    - 0.214 * Math.sin(2 * Mp) - 0.11 * Math.sin(D);
+  return (1 + Math.cos(i * RAD)) / 2;
+}
+
+function moonNow(now = new Date()) {
+  const nextNew = nextPhase("new", now);
+  const nextFull = nextPhase("full", now);
+  const lastNew = previousNewMoon(now);
+  const lit = illumination(now);
+  const waxing = nextFull < nextNew;
+  const ageDays = (now - lastNew) / 86400000;
+  let name;
+  if (lit < 0.02) name = "New Moon";
+  else if (lit > 0.98) name = "Full Moon";
+  else if (Math.abs(lit - 0.5) < 0.04) name = waxing ? "First Quarter" : "Last Quarter";
+  else if (lit < 0.5) name = waxing ? "Waxing Crescent" : "Waning Crescent";
+  else name = waxing ? "Waxing Gibbous" : "Waning Gibbous";
+  return { name, lit, waxing, ageDays, nextNew, nextFull };
+}
+
+
+
+// ---------- Realistic moon renderer (canvas, no images) ----------
+const MoonArt = (() => {
+  let S = 0, albedo = null, height = null;
+
+  // Seeded random + smooth value noise
+  let seed = 7;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  const hash = (x, y) => {
+    let h = (x * 374761393 + y * 668265263) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+  };
+  const sm = (t) => t * t * (3 - 2 * t);
+  function vnoise(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+    const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
+    const u = sm(xf), v = sm(yf);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  }
+  function fbm(x, y, oct) {
+    let s = 0, amp = 0.5, f = 1;
+    for (let i = 0; i < oct; i++) { s += amp * vnoise(x * f, y * f); f *= 2.03; amp *= 0.5; }
+    return s;
+  }
+  const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+  // The near side as seen from India (north up). x right, y down, disc radius 1.
+  const MARIA = [
+    { x: -0.58, y: -0.02, rx: 0.30, ry: 0.50, d: 0.30 }, // Oceanus Procellarum
+    { x: -0.30, y: -0.44, rx: 0.27, ry: 0.22, d: 0.33 }, // Mare Imbrium
+    { x: 0.16, y: -0.42, rx: 0.15, ry: 0.14, d: 0.31 },  // Mare Serenitatis
+    { x: 0.32, y: -0.11, rx: 0.19, ry: 0.15, d: 0.33 },  // Mare Tranquillitatis
+    { x: 0.70, y: -0.28, rx: 0.10, ry: 0.085, d: 0.34 }, // Mare Crisium
+    { x: 0.56, y: 0.10, rx: 0.11, ry: 0.15, d: 0.27 },   // Mare Fecunditatis
+    { x: 0.38, y: 0.30, rx: 0.08, ry: 0.08, d: 0.26 },   // Mare Nectaris
+    { x: -0.20, y: 0.32, rx: 0.17, ry: 0.13, d: 0.24 },  // Mare Nubium
+    { x: -0.56, y: 0.38, rx: 0.08, ry: 0.08, d: 0.28 },  // Mare Humorum
+    { x: 0.03, y: -0.22, rx: 0.07, ry: 0.05, d: 0.24 },  // Mare Vaporum
+    { x: -0.05, y: -0.76, rx: 0.40, ry: 0.07, d: 0.16 }, // Mare Frigoris
+    { x: -0.05, y: 0.02, rx: 0.08, ry: 0.06, d: 0.18 },  // Sinus Medii
+    { x: -0.40, y: 0.12, rx: 0.10, ry: 0.10, d: 0.22 },  // Mare Cognitum
+  ];
+  // Named young craters: bright floors and (Tycho) rays
+  const NAMED = [
+    { x: -0.13, y: 0.70, r: 0.050, bright: 0.16, rays: 1.0 },  // Tycho
+    { x: -0.32, y: -0.17, r: 0.055, bright: 0.12, rays: 0.45 }, // Copernicus
+    { x: -0.62, y: -0.13, r: 0.026, bright: 0.12, rays: 0.3 },  // Kepler
+    { x: -0.75, y: -0.38, r: 0.020, bright: 0.22, rays: 0.15 }, // Aristarchus
+    { x: 0.08, y: 0.60, r: 0.08, bright: 0.02, rays: 0 },       // Clavius-ish southern basin
+    { x: -0.04, y: 0.45, r: 0.06, bright: 0.02, rays: 0 },      // Ptolemaeus area
+    { x: 0.62, y: 0.42, r: 0.05, bright: 0.04, rays: 0 },       // Petavius
+    { x: 0.28, y: 0.48, r: 0.045, bright: 0.04, rays: 0 },      // Theophilus
+  ];
+
+  function mariaAt(x, y) {
+    let m = 0;
+    for (const a of MARIA) {
+      const dx = (x - a.x) / (a.rx * 1.22), dy = (y - a.y) / (a.ry * 1.22);
+      const d = Math.sqrt(dx * dx + dy * dy) + (fbm(x * 5 + 11, y * 5 + 5, 4) - 0.5) * 0.9 + (vnoise(x * 22, y * 22) - 0.5) * 0.18;
+      const v = (1 - smoothstep(0.62, 1.12, d)) * a.d * 1.1 * (0.78 + 0.44 * fbm(x * 9 + 2, y * 9 + 7, 3));
+      if (v > m) m = v;
+    }
+    return m;
+  }
+
+  function addCrater(c) {
+    const r0 = Math.hypot(c.x, c.y);
+    if (r0 > 0.985) return;
+    const z = Math.sqrt(1 - r0 * r0);
+    const ux = r0 > 1e-6 ? c.x / r0 : 1, uy = r0 > 1e-6 ? c.y / r0 : 0;
+    const R = c.r, ext = R * 1.6;
+    const x0 = Math.max(0, Math.floor(((c.x - ext + 1) / 2) * S)), x1 = Math.min(S - 1, Math.ceil(((c.x + ext + 1) / 2) * S));
+    const y0 = Math.max(0, Math.floor(((c.y - ext + 1) / 2) * S)), y1 = Math.min(S - 1, Math.ceil(((c.y + ext + 1) / 2) * S));
+    for (let py = y0; py <= y1; py++) {
+      const y = ((py + 0.5) / S) * 2 - 1;
+      for (let px = x0; px <= x1; px++) {
+        const x = ((px + 0.5) / S) * 2 - 1;
+        const dx = x - c.x, dy = y - c.y;
+        const u = (dx * ux + dy * uy) / z, v = -dx * uy + dy * ux; // un-foreshorten
+        const d = Math.sqrt(u * u + v * v) / R;
+        if (d > 1.6) continue;
+        const i = py * S + px;
+        let h;
+        if (d < 1) h = -0.16 * R * (1 - d * d) + 0.05 * R * Math.pow(d, 8);
+        else h = 0.05 * R * Math.pow(1 - (d - 1) / 0.6, 2);
+        height[i] += h;
+        // albedo: bright rim, bright floor for young craters
+        const rim = Math.exp(-Math.pow((d - 1) / 0.12, 2));
+        albedo[i] += rim * 0.015 + (d < 1 ? c.bright * (1 - d * 0.5) : c.bright * 0.5 * Math.max(0, 1 - (d - 1) / 0.6));
+      }
+    }
+  }
+
+  function addRays(c) {
+    const n = Math.round(10 + 8 * c.rays);
+    const rays = [];
+    for (let k = 0; k < n; k++) rays.push({ a: rand() * Math.PI * 2, w: 0.03 + rand() * 0.05, len: 0.25 + rand() * 0.75 * c.rays });
+    for (let py = 0; py < S; py++) {
+      const y = ((py + 0.5) / S) * 2 - 1;
+      for (let px = 0; px < S; px++) {
+        const x = ((px + 0.5) / S) * 2 - 1;
+        if (x * x + y * y > 1) continue;
+        const dx = x - c.x, dy = y - c.y, dist = Math.hypot(dx, dy);
+        if (dist < c.r * 1.2) continue;
+        const ang = Math.atan2(dy, dx);
+        let s = 0;
+        for (const r of rays) {
+          if (dist > r.len) continue;
+          let da = Math.abs(ang - r.a); if (da > Math.PI) da = 2 * Math.PI - da;
+          s += Math.exp(-Math.pow(da / r.w, 2)) * (1 - dist / r.len);
+        }
+        albedo[py * S + px] += Math.min(s, 1) * 0.05 * c.rays * (0.6 + 0.8 * vnoise(x * 40, y * 40));
+      }
+    }
+  }
+
+  function build(size) {
+    S = size; seed = 7;
+    albedo = new Float32Array(S * S); height = new Float32Array(S * S);
+    for (let py = 0; py < S; py++) {
+      const y = ((py + 0.5) / S) * 2 - 1;
+      for (let px = 0; px < S; px++) {
+        const x = ((px + 0.5) / S) * 2 - 1;
+        if (x * x + y * y > 1.02) continue;
+        const i = py * S + px;
+        const m = mariaAt(x, y);
+        const south = Math.max(0, y) * 0.04; // southern highlands a touch brighter
+        albedo[i] = 0.80 + south - m + (fbm(x * 4, y * 4, 4) - 0.5) * 0.12 + (vnoise(x * 90, y * 90) - 0.5) * 0.05 + (fbm(x * 30 + 5, y * 30, 3) - 0.5) * 0.06;
+        height[i] = (fbm(x * 18 + 3, y * 18 + 9, 3) - 0.5) * 0.004;
+      }
+    }
+    // Random craters, thicker in the highlands
+    for (let k = 0; k < 240; k++) {
+      const a = rand() * Math.PI * 2, rr = Math.sqrt(rand()) * 0.98;
+      const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+      if (mariaAt(x, y) > 0.15 && rand() < 0.85) continue;
+      const r = 0.004 + Math.pow(rand(), 4) * 0.04;
+      addCrater({ x, y, r, bright: 0, rays: 0 });
+    }
+    for (const c of NAMED) addCrater(c);
+    for (const c of NAMED) if (c.rays > 0.2) addRays(c);
+  }
+
+  // lit: fraction of disc lit (0–1); waxing: sunlit side on the right
+  function draw(canvas, lit, waxing) {
+    const size = canvas.width;
+    if (size !== S) build(size);
+    const ctx = canvas.getContext("2d");
+    const img = ctx.createImageData(S, S), out = img.data;
+    const c = 2 * lit - 1, s = Math.sqrt(Math.max(0, 1 - c * c)) * (waxing ? 1 : -1);
+    const Lx = s, Ly = -0.08 * Math.abs(s), Lz = c; // sun direction (slight tilt)
+    const Ln = Math.hypot(Lx, Ly, Lz);
+    const lx = Lx / Ln, ly = Ly / Ln, lz = Lz / Ln;
+    const earthshine = 0.07 * Math.pow(1 - lit, 2);
+    const k = S / 2; // gradient scale (pixels → disc units)
+    for (let py = 0; py < S; py++) {
+      const y = ((py + 0.5) / S) * 2 - 1;
+      for (let px = 0; px < S; px++) {
+        const x = ((px + 0.5) / S) * 2 - 1;
+        const r2 = x * x + y * y;
+        const o = (py * S + px) * 4;
+        const edge = Math.min(1, Math.max(0, (1 - Math.sqrt(r2)) * k));
+        if (edge <= 0) { out[o + 3] = 0; continue; }
+        const i = py * S + px;
+        const nz0 = Math.sqrt(Math.max(0, 1 - r2));
+        // surface slope from the height map
+        const gx = (px > 0 && px < S - 1) ? (height[i + 1] - height[i - 1]) * k / 2 : 0;
+        const gy = (py > 0 && py < S - 1) ? (height[i + S] - height[i - S]) * k / 2 : 0;
+        let nx = x - gx * 0.8, ny = y - gy * 0.8, nz = nz0;
+        const nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl;
+        const mu0 = nx * lx + ny * ly + nz * lz;
+        const mu = Math.max(0.02, nz0);
+        let b = mu0 > 0 ? Math.min(1.25, (2 * mu0) / (mu0 + mu)) : 0;
+        b *= smoothstep(-0.01, 0.05, mu0) * smoothstep(-0.05, 0.04, x * lx + y * ly + nz0 * lz);
+        const a = albedo[i];
+        let v = a * b * 0.98 + a * earthshine;
+        const R = Math.min(255, v * 255 * 1.0), G = Math.min(255, v * 255 * 0.975), B = Math.min(255, v * 255 * 0.93 + earthshine * 40 * (1 - b));
+        out[o] = R; out[o + 1] = G; out[o + 2] = B; out[o + 3] = 255 * edge;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  return { draw };
+})();
+
+
+// ---------- 3D moon globe (three.js) ----------
+const MoonGlobe = (() => {
+  // 3D value noise (seamless on a sphere)
+  const h3 = (x, y, z) => {
+    let h = (x * 374761393 + y * 668265263 + z * 2147483647) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+  };
+  const sm = (t) => t * t * (3 - 2 * t);
+  function n3(x, y, z) {
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    const u = sm(x - xi), v = sm(y - yi), w = sm(z - zi);
+    const L = (a, b, t) => a + (b - a) * t;
+    return L(
+      L(L(h3(xi, yi, zi), h3(xi + 1, yi, zi), u), L(h3(xi, yi + 1, zi), h3(xi + 1, yi + 1, zi), u), v),
+      L(L(h3(xi, yi, zi + 1), h3(xi + 1, yi, zi + 1), u), L(h3(xi, yi + 1, zi + 1), h3(xi + 1, yi + 1, zi + 1), u), v), w);
+  }
+  function fbm3(x, y, z, oct) {
+    let s = 0, a = 0.5, f = 1;
+    for (let i = 0; i < oct; i++) { s += a * n3(x * f, y * f, z * f); f *= 2.03; a *= 0.5; }
+    return s;
+  }
+  const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  let seed = 11;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+
+  // Near-side seas in disc coordinates (x right, y down), as seen from Earth
+  const MARIA = [
+    [-0.58, -0.02, 0.30, 0.50, 0.30], [-0.30, -0.44, 0.27, 0.22, 0.33], [0.16, -0.42, 0.15, 0.14, 0.31],
+    [0.32, -0.11, 0.19, 0.15, 0.33], [0.70, -0.28, 0.10, 0.085, 0.34], [0.56, 0.10, 0.11, 0.15, 0.27],
+    [0.38, 0.30, 0.08, 0.08, 0.26], [-0.20, 0.32, 0.17, 0.13, 0.24], [-0.56, 0.38, 0.08, 0.08, 0.28],
+    [0.03, -0.22, 0.07, 0.05, 0.24], [-0.05, -0.76, 0.40, 0.07, 0.16], [-0.05, 0.02, 0.08, 0.06, 0.18],
+    [-0.40, 0.12, 0.10, 0.10, 0.22],
+  ];
+  // disc point -> unit vector (y up, z toward Earth)
+  const fromDisc = (x, y) => { const z = Math.sqrt(Math.max(0, 1 - x * x - y * y)); return [x, -y, z]; };
+  const fromLatLon = (lat, lon) => [Math.cos(lat) * Math.sin(lon), Math.sin(lat), Math.cos(lat) * Math.cos(lon)];
+  const NAMED = [ // [disc x, disc y, angular radius, bright floor, rays]
+    [-0.13, 0.70, 0.050, 0.16, 1.0], [-0.32, -0.17, 0.055, 0.12, 0.45], [-0.62, -0.13, 0.026, 0.12, 0.3],
+    [-0.75, -0.38, 0.020, 0.22, 0.15], [0.08, 0.60, 0.08, 0.02, 0], [-0.04, 0.45, 0.06, 0.02, 0],
+    [0.62, 0.42, 0.05, 0.04, 0], [0.28, 0.48, 0.045, 0.04, 0],
+  ].map(([x, y, r, b, rays]) => ({ c: fromDisc(x, y), r, bright: b, rays }));
+
+  function buildTextures(W, H) {
+    seed = 11;
+    const alb = new Float32Array(W * H), hgt = new Float32Array(W * H);
+    const P = new Float32Array(W * H * 3), maria = new Float32Array(W * H);
+    for (let j = 0; j < H; j++) {
+      const lat = (0.5 - (j + 0.5) / H) * Math.PI;
+      for (let i = 0; i < W; i++) {
+        const lon = ((i + 0.5) / W) * 2 * Math.PI - Math.PI;
+        const [x, y, z] = fromLatLon(lat, lon);
+        const k = j * W + i; P[k * 3] = x; P[k * 3 + 1] = y; P[k * 3 + 2] = z;
+        let a = 0.80 + (fbm3(x * 2 + 7, y * 2, z * 2, 4) - 0.5) * 0.12 + (fbm3(x * 16, y * 16 + 3, z * 16, 3) - 0.5) * 0.08;
+        a += Math.max(0, -y) * 0.03;
+        // seas
+        let m = 0;
+        if (z > -0.25) {
+          const dx0 = x, dy0 = -y;
+          const dn = (fbm3(x * 2.6 + 11, y * 2.6 + 5, z * 2.6, 4) - 0.5) * 0.9 + (n3(x * 11, y * 11, z * 11) - 0.5) * 0.18;
+          const inner = 0.78 + 0.44 * fbm3(x * 4.5 + 2, y * 4.5 + 7, z * 4.5, 3);
+          for (const [cx, cy, rx, ry, d] of MARIA) {
+            const ex = (dx0 - cx) / (rx * 1.22), ey = (dy0 - cy) / (ry * 1.22);
+            const v = (1 - ss(0.62, 1.12, Math.sqrt(ex * ex + ey * ey) + dn)) * d * 1.1 * inner;
+            if (v > m) m = v;
+          }
+          m *= ss(-0.25, 0.15, z);
+        }
+        // far side: small Mare Moscoviense, darker South Pole–Aitken basin
+        const mosc = fromLatLon(27 * Math.PI / 180, 147 * Math.PI / 180);
+        const dm = Math.acos(Math.min(1, x * mosc[0] + y * mosc[1] + z * mosc[2]));
+        m = Math.max(m, (1 - ss(0.08, 0.16, dm + (n3(x * 9, y * 9, z * 9) - 0.5) * 0.08)) * 0.25);
+        const spa = fromLatLon(-53 * Math.PI / 180, 191 * Math.PI / 180);
+        const ds = Math.acos(Math.min(1, x * spa[0] + y * spa[1] + z * spa[2]));
+        a -= (1 - ss(0.3, 0.75, ds)) * 0.07;
+        alb[k] = a - m;
+        hgt[k] = (fbm3(x * 20 + 3, y * 20 + 9, z * 20, 3) - 0.5) * 0.15;
+        maria[k] = m;
+      }
+    }
+    function crater(c, R, bright) {
+      const lat = Math.asin(c[1]), lon = Math.atan2(c[0], c[2]);
+      const ext = R * 1.6;
+      const j0 = Math.max(0, Math.floor((0.5 - (lat + ext) / Math.PI) * H)), j1 = Math.min(H - 1, Math.ceil((0.5 - (lat - ext) / Math.PI) * H));
+      const cl = Math.max(0.05, Math.cos(Math.min(Math.PI / 2 - 0.01, Math.abs(lat) + ext)));
+      const lonExt = (j0 === 0 || j1 === H - 1) ? Math.PI : ext / cl;
+      const i0 = Math.floor(((lon - lonExt + Math.PI) / (2 * Math.PI)) * W), i1 = Math.ceil(((lon + lonExt + Math.PI) / (2 * Math.PI)) * W);
+      for (let j = j0; j <= j1; j++) for (let ii = i0; ii <= i1; ii++) {
+        const i = ((ii % W) + W) % W, k = j * W + i;
+        const dot = P[k * 3] * c[0] + P[k * 3 + 1] * c[1] + P[k * 3 + 2] * c[2];
+        const d = Math.acos(Math.min(1, dot)) / R;
+        if (d > 1.6) continue;
+        hgt[k] += d < 1 ? -0.9 * (1 - d * d) + 0.28 * Math.pow(d, 8) : 0.28 * Math.pow(1 - (d - 1) / 0.6, 2);
+        const rim = Math.exp(-Math.pow((d - 1) / 0.12, 2));
+        alb[k] += rim * 0.015 + (d < 1 ? bright * (1 - d * 0.5) : bright * 0.5 * Math.max(0, 1 - (d - 1) / 0.6));
+      }
+    }
+    for (let n = 0; n < 1500; n++) {
+      const zz = 2 * rand() - 1, t = rand() * 2 * Math.PI, q = Math.sqrt(1 - zz * zz);
+      const c = [q * Math.cos(t), zz, q * Math.sin(t)];
+      const lat = Math.asin(c[1]), lon = Math.atan2(c[0], c[2]);
+      const j = Math.min(H - 1, Math.floor((0.5 - lat / Math.PI) * H)), i = Math.min(W - 1, Math.floor(((lon + Math.PI) / (2 * Math.PI)) * W));
+      if (maria[j * W + i] > 0.15 && rand() < 0.85) continue;
+      crater(c, 0.004 + Math.pow(rand(), 4) * 0.045, 0);
+    }
+    for (const c of NAMED) crater(c.c, c.r, c.bright);
+    // bright rays
+    for (const c of NAMED) {
+      if (c.rays < 0.2) continue;
+      const up = [0, 1, 0];
+      let e = [up[1] * c.c[2] - up[2] * c.c[1], up[2] * c.c[0] - up[0] * c.c[2], up[0] * c.c[1] - up[1] * c.c[0]];
+      const el = Math.hypot(...e); e = e.map((v) => v / el);
+      const nn = [c.c[1] * e[2] - c.c[2] * e[1], c.c[2] * e[0] - c.c[0] * e[2], c.c[0] * e[1] - c.c[1] * e[0]];
+      const rays = Array.from({ length: Math.round(10 + 8 * c.rays) }, () => ({ a: rand() * 2 * Math.PI, w: 0.03 + rand() * 0.05, len: 0.25 + rand() * 0.75 * c.rays }));
+      for (let k = 0; k < W * H; k++) {
+        const px = P[k * 3], py = P[k * 3 + 1], pz = P[k * 3 + 2];
+        const dot = px * c.c[0] + py * c.c[1] + pz * c.c[2];
+        if (dot < 0.4) continue;
+        const dist = Math.acos(Math.min(1, dot));
+        if (dist < c.r * 1.2) continue;
+        const ang = Math.atan2(px * nn[0] + py * nn[1] + pz * nn[2], px * e[0] + py * e[1] + pz * e[2]);
+        let s = 0;
+        for (const r of rays) {
+          if (dist > r.len) continue;
+          let da = Math.abs(ang - r.a); if (da > Math.PI) da = 2 * Math.PI - da;
+          s += Math.exp(-Math.pow(da / r.w, 2)) * (1 - dist / r.len);
+        }
+        alb[k] += Math.min(s, 1) * 0.05 * c.rays * (0.6 + 0.8 * n3(px * 40, py * 40, pz * 40));
+      }
+    }
+    const mk = () => { const cv = document.createElement("canvas"); cv.width = W; cv.height = H; return cv; };
+    const col = mk(), bmp = mk();
+    const ci = col.getContext("2d").createImageData(W, H), bi = bmp.getContext("2d").createImageData(W, H);
+    for (let k = 0; k < W * H; k++) {
+      const v = Math.max(0, Math.min(1, alb[k])) * 255;
+      ci.data[k * 4] = v; ci.data[k * 4 + 1] = v * 0.975; ci.data[k * 4 + 2] = v * 0.93; ci.data[k * 4 + 3] = 255;
+      const b = Math.max(0, Math.min(255, 128 + hgt[k] * 90));
+      bi.data[k * 4] = bi.data[k * 4 + 1] = bi.data[k * 4 + 2] = b; bi.data[k * 4 + 3] = 255;
+    }
+    col.getContext("2d").putImageData(ci, 0, 0); bmp.getContext("2d").putImageData(bi, 0, 0);
+    return { col, bmp };
+  }
+
+  let renderer, scene, camera, mesh, sun, ambient, home, needs = true, ready = false;
+  let vel = { x: 0, y: 0 }, dragging = false, last = null, resetT = null;
+
+  function init(host) {
+    if (!window.THREE) return false;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (e) { return false; }
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setClearColor(0x000000, 0);
+    if ("outputEncoding" in renderer) renderer.outputEncoding = THREE.sRGBEncoding;
+    host.appendChild(renderer.domElement);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+    camera.position.set(0, 0, 3.87);
+    const small = window.innerWidth < 500;
+    const { col, bmp } = buildTextures(small ? 1024 : 1536, small ? 512 : 768);
+    const map = new THREE.CanvasTexture(col), bump = new THREE.CanvasTexture(bmp);
+    if ("encoding" in map) map.encoding = THREE.sRGBEncoding;
+    map.anisotropy = 4;
+    const mat = new THREE.MeshStandardMaterial({ map, bumpMap: bump, bumpScale: 0.015, roughness: 1, metalness: 0 });
+    mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 96), mat);
+    mesh.rotation.y = -Math.PI / 2; // texture centre (lon 0) faces Earth
+    home = mesh.quaternion.clone();
+    scene.add(mesh);
+    sun = new THREE.DirectionalLight(0xfff8ec, 2.6);
+    scene.add(sun);
+    ambient = new THREE.AmbientLight(0x8fa4d8, 0.004);
+    scene.add(ambient);
+    resize(host);
+    window.addEventListener("resize", () => resize(host));
+    bindDrag(renderer.domElement);
+    ready = true;
+    loop();
+    return true;
+  }
+
+  function resize(host) {
+    const s = host.clientWidth;
+    renderer.setSize(s, s, false);
+    renderer.domElement.style.width = renderer.domElement.style.height = "100%";
+    needs = true;
+  }
+
+  function setSun(lit, waxing) {
+    if (!ready) return;
+    const c = 2 * lit - 1, s = Math.sqrt(Math.max(0, 1 - c * c)) * (waxing ? 1 : -1);
+    sun.position.set(s, 0.08 * Math.abs(s), c).normalize();
+    ambient.intensity = 0.002 + 0.012 * Math.pow(1 - lit, 2); // faint earthshine on the dark side
+    needs = true;
+  }
+
+  function bindDrag(el) {
+    el.style.touchAction = "none";
+    el.style.cursor = "grab";
+    const rot = (dx, dy) => {
+      const qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dx);
+      const qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy);
+      mesh.quaternion.premultiply(qy).premultiply(qx);
+      needs = true;
+    };
+    el.addEventListener("pointerdown", (e) => {
+      dragging = true; resetT = null; last = { x: e.clientX, y: e.clientY, t: performance.now() };
+      vel = { x: 0, y: 0 }; el.setPointerCapture(e.pointerId); el.style.cursor = "grabbing";
+    });
+    el.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const k = 3.2 / el.clientWidth;
+      const dx = (e.clientX - last.x) * k, dy = (e.clientY - last.y) * k;
+      const now = performance.now(), dt = Math.max(1, now - last.t);
+      vel = { x: (dx / dt) * 16, y: (dy / dt) * 16 };
+      rot(dx, dy); last = { x: e.clientX, y: e.clientY, t: now };
+      MoonGlobe.onMove && MoonGlobe.onMove();
+    });
+    const up = () => { dragging = false; el.style.cursor = "grab"; };
+    el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
+    el.addEventListener("dblclick", reset);
+    MoonGlobe._rot = rot;
+  }
+
+  function reset() {
+    vel = { x: 0, y: 0 };
+    resetT = { from: mesh.quaternion.clone(), t0: performance.now() };
+    needs = true;
+  }
+
+  function loop() {
+    requestAnimationFrame(loop);
+    if (!dragging && (Math.abs(vel.x) > 1e-4 || Math.abs(vel.y) > 1e-4)) {
+      MoonGlobe._rot(vel.x, vel.y); vel.x *= 0.95; vel.y *= 0.95;
+    }
+    if (resetT) {
+      const t = Math.min(1, (performance.now() - resetT.t0) / 900), e = 1 - Math.pow(1 - t, 3);
+      mesh.quaternion.copy(resetT.from).slerp(home, e);
+      needs = true;
+      if (t >= 1) resetT = null;
+    }
+    if (needs) { renderer.render(scene, camera); needs = false; }
+  }
+
+  const isTurned = () => ready && mesh.quaternion.angleTo(home) > 0.05;
+  return { init, setSun, reset, isTurned, onMove: null };
+})();
+
+// First/last quarter times (Meeus ch. 49). frac 0.25 = first, 0.75 = last.
+function quarterTime(k, frac) {
+  k = k + frac;
+  const T = k / 1236.85, T2 = T * T, T3 = T2 * T, T4 = T3 * T;
+  let jde = 2451550.09766 + 29.530588861 * k + 0.00015437 * T2 - 0.00000015 * T3 + 0.00000000073 * T4;
+  const E = 1 - 0.002516 * T - 0.0000074 * T2;
+  const R = Math.PI / 180, nm = (d) => ((d % 360) + 360) % 360;
+  const M = nm(2.5534 + 29.1053567 * k - 0.0000014 * T2 - 0.00000011 * T3) * R;
+  const Mp = nm(201.5643 + 385.81693528 * k + 0.0107582 * T2 + 0.00001238 * T3 - 0.000000058 * T4) * R;
+  const F = nm(160.7108 + 390.67050284 * k - 0.0016118 * T2 - 0.00000227 * T3 + 0.000000011 * T4) * R;
+  const O = nm(124.7746 - 1.56375588 * k + 0.0020672 * T2 + 0.00000215 * T3) * R;
+  const s = Math.sin, c = Math.cos;
+  let x = -0.62801 * s(Mp) + 0.17172 * E * s(M) - 0.01183 * E * s(Mp + M) + 0.00862 * s(2 * Mp)
+    + 0.00804 * s(2 * F) + 0.00454 * E * s(Mp - M) + 0.00204 * E * E * s(2 * M) - 0.0018 * s(Mp - 2 * F)
+    - 0.0007 * s(Mp + 2 * F) - 0.0004 * s(3 * Mp) - 0.00034 * E * s(2 * Mp - M) + 0.00032 * E * s(M + 2 * F)
+    + 0.00032 * E * s(M - 2 * F) - 0.00028 * E * E * s(Mp + 2 * M) + 0.00027 * E * s(2 * Mp + M) - 0.00017 * s(O)
+    - 0.00005 * s(Mp - M - 2 * F) + 0.00004 * s(2 * Mp + 2 * F) - 0.00004 * s(Mp + M + 2 * F) + 0.00004 * s(Mp - 2 * M)
+    + 0.00003 * s(Mp + M - 2 * F) + 0.00003 * s(3 * M) + 0.00002 * s(2 * Mp - 2 * F) + 0.00002 * s(Mp - M + 2 * F)
+    - 0.00002 * s(3 * Mp + M);
+  const W = 0.00306 - 0.00038 * E * c(M) + 0.00026 * c(Mp) - 0.00002 * c(Mp - M) + 0.00002 * c(Mp + M) + 0.00002 * c(2 * F);
+  x += frac === 0.25 ? W : -W;
+  const A = [299.77 + 0.107408 * k - 0.009173 * T2, 251.88 + 0.016321 * k, 251.83 + 26.651886 * k,
+    349.42 + 36.412478 * k, 84.66 + 18.206239 * k, 141.74 + 53.303771 * k, 207.14 + 2.453732 * k,
+    154.84 + 7.30686 * k, 34.52 + 27.261239 * k, 207.19 + 0.121824 * k, 291.34 + 1.844379 * k,
+    161.72 + 24.198154 * k, 239.56 + 25.513099 * k, 331.55 + 3.592518 * k];
+  const Wt = [325, 165, 164, 126, 110, 62, 60, 56, 47, 42, 40, 37, 35, 23];
+  for (let i = 0; i < 14; i++) x += Wt[i] * 1e-6 * s(A[i] * R);
+  return new Date((jde + x - 69 / 86400 - 2440587.5) * 86400000);
+}
+
+// All main phases between two dates, sorted: [{kind, date}]
+function phasesBetween(from, to) {
+  const out = [];
+  const jd = from.getTime() / 86400000 + 2440587.5;
+  let k = Math.floor((jd - 2451550.09766) / 29.530588861) - 1;
+  for (;; k++) {
+    const ev = [
+      { kind: "new", date: phaseTime(k, 0) }, { kind: "first", date: quarterTime(k, 0.25) },
+      { kind: "full", date: phaseTime(k, 0.5) }, { kind: "last", date: quarterTime(k, 0.75) },
+    ];
+    for (const e of ev) if (e.date >= from && e.date < to) out.push(e);
+    if (ev[0].date > to) break;
+  }
+  return out.sort((a, b) => a.date - b.date);
+}
+
+let globeOn = false;
+const IST = "Asia/Kolkata";
+const fmt = (d, o) => d.toLocaleString("en-IN", Object.assign({ timeZone: IST }, o));
+
+function countdown(ms) {
+  const mins = Math.max(0, Math.round(ms / 60000));
+  const d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
+  if (d > 0) return `in ${d} day${d === 1 ? "" : "s"}, ${h} hr${h === 1 ? "" : "s"}`;
+  if (h > 0) return `in ${h} hr${h === 1 ? "" : "s"}, ${m} min`;
+  return `in ${m} min`;
+}
+
+// NASA "Moon Phase and Libration" (Dial-A-Moon) sets, one per year, north up.
+// Add next year's id from https://svs.gsfc.nasa.gov/gallery/moonphase/ when NASA publishes it.
+const SVS_YEARS = { 2026: 5587 };
+let photoKey = null;
+
+function frameUrl(now) {
+  const y = now.getUTCFullYear(), id = SVS_YEARS[y];
+  if (!id) return null;
+  const frame = Math.floor((now - Date.UTC(y, 0, 1)) / 3600000) + 1;
+  const dir = "a00" + String(Math.floor(id / 100) * 100).padStart(4, "0");
+  return `https://svs.gsfc.nasa.gov/vis/a000000/${dir}/a00${id}/frames/730x730_1x1_30p/moon.${String(frame).padStart(4, "0")}.jpg`;
+}
+
+async function apiUrl(now) {
+  // NASA's Dial-A-Moon API works for any year; may be blocked by the browser, so it's optional.
+  const stamp = now.toISOString().slice(0, 13) + ":00";
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 4000);
+  try {
+    const r = await fetch(`https://svs.gsfc.nasa.gov/api/dialamoon/${stamp}`, { signal: ctl.signal });
+    const j = await r.json();
+    return (j && j.image && j.image.url) || null;
+  } catch (e) { return null; } finally { clearTimeout(t); }
+}
+
+function showPhoto(url) {
+  return new Promise((res) => {
+    const img = document.getElementById("photo");
+    const probe = new Image();
+    probe.onload = () => { img.src = url; res(true); };
+    probe.onerror = () => res(false);
+    probe.src = url;
+  });
+}
+
+let photoUrl = null, photoView = false;
+async function updatePhoto(now) {
+  const key = now.toISOString().slice(0, 13); // NASA has one picture per UTC hour
+  if (key === photoKey) return;
+  photoKey = key;
+  const candidates = [frameUrl(now), await apiUrl(now)].filter(Boolean);
+  photoUrl = null;
+  for (const url of candidates) {
+    if (await showPhoto(url)) { photoUrl = url; break; }
+  }
+  document.getElementById("photoBtn").hidden = !photoUrl;
+  document.getElementById("photoNote").hidden = !photoUrl;
+  if (!photoUrl && photoView) setPhotoMode(false);
+}
+
+function setPhotoMode(on) {
+  photoView = on;
+  document.getElementById("photo").hidden = !on;
+  document.getElementById("globe").hidden = !on ? false : true;
+  document.getElementById("moon").hidden = on || globeOn;
+  document.getElementById("credit").hidden = !on;
+  document.getElementById("wrap").classList.toggle("photo", on);
+  document.querySelector(".hint").hidden = on;
+  document.getElementById("reset").style.display = on ? "none" : "";
+  document.getElementById("photoBtn").textContent = on ? "Back to 3D moon" : "Show NASA photo";
+}
+document.getElementById("photoBtn").addEventListener("click", () => setPhotoMode(!photoView));
+
+function drawMoon(lit, waxing) {
+  MoonGlobe.setSun(lit, waxing);
+  if (globeOn) return;
+  if (photoView) return;
+  const cv = document.getElementById("moon");
+  const px = Math.round(cv.clientWidth * Math.min(2, window.devicePixelRatio || 1)) || 520;
+  if (cv.width !== px) { cv.width = px; cv.height = px; }
+  MoonArt.draw(cv, lit, waxing);
+  const wrap = cv.parentElement;
+  wrap.style.setProperty("--glow", (20 + lit * 50) + "px");
+  wrap.style.setProperty("--glowa", (0.04 + lit * 0.16).toFixed(2));
+}
+
+function card(kind, label, date, now) {
+  return `<div class="card ${kind}">
+    <div class="label"><i></i>${label}</div>
+    <div class="date">${fmt(date, { weekday: "short", day: "numeric", month: "short" })}</div>
+    <div class="time">${fmt(date, { year: "numeric" })} · ${fmt(date, { hour: "numeric", minute: "2-digit", hour12: true })} IST</div>
+    <div class="in">${countdown(date - now)}</div>
+  </div>`;
+}
+
+
+function renderCycle(m, now) {
+  const LB = { new: "New", first: "1st Q", full: "Full", last: "Last Q" };
+  const start = new Date(now.getTime() - m.ageDays * 86400000), end = m.nextNew, span = end - start;
+  const pos = (d) => Math.max(0, Math.min(100, ((d - start) / span) * 100));
+  const nowP = pos(now);
+  let marks = "", labels = "";
+  for (const e of phasesBetween(new Date(start.getTime() - 60000), new Date(end.getTime() + 60000))) {
+    const p = pos(e.date), past = e.date <= now ? " past" : "";
+    const edge = p < 4 ? " first" : p > 96 ? " last" : "";
+    marks += `<span class="mk mk-${e.kind}${past}" style="left:${p}%"></span>`;
+    labels += `<span class="lb${edge}${past}" style="left:${p}%"><b>${LB[e.kind]}</b>${fmt(e.date, { day: "numeric", month: "short" })}</span>`;
+  }
+  document.getElementById("cycle").innerHTML =
+    `<div class="cyc-track"><div class="cyc-fill" style="width:${nowP}%"></div>${marks}<span class="cyc-now" style="left:${nowP}%"><i>Now</i></span></div><div class="cyc-labels">${labels}</div>`;
+}
+
+function render() {
+  const now = new Date();
+  const m = moonNow(now);
+  document.getElementById("now").innerHTML =
+    `<span>${fmt(now, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span><span class="sep"> · </span><span>${fmt(now, { hour: "numeric", minute: "2-digit", hour12: true })} IST</span>`;
+  document.getElementById("name").textContent = m.name;
+  document.getElementById("facts").innerHTML =
+    `<b>${Math.round(m.lit * 100)}%</b> lit · ${m.waxing ? "growing" : "shrinking"} · day <b>${m.ageDays.toFixed(1)}</b> of 29.5`;
+  const word = m.name === "Full Moon" ? "Full Moon" : m.name === "New Moon" ? "New Moon" : m.waxing ? "Waxing" : "Waning";
+  document.getElementById("meaning").innerHTML = {
+    "Waxing": "<em>Waxing</em> means growing: a little more of the moon is lit each night until full moon (Shukla Paksha).",
+    "Waning": "<em>Waning</em> means shrinking: a little less of the moon is lit each night until new moon (Krishna Paksha).",
+    "Full Moon": "<em>Full Moon</em>: the whole face is lit. From here it starts waning, or shrinking (Purnima).",
+    "New Moon": "<em>New Moon</em>: the lit side faces away from us, so the moon is dark. From here it starts waxing, or growing (Amavasya).",
+  }[word];
+  renderCycle(m, now);
+  drawMoon(m.lit, m.waxing);
+  const cards = [
+    { kind: "full", label: "Next full moon", date: m.nextFull },
+    { kind: "new", label: "Next new moon", date: m.nextNew },
+  ].sort((a, b) => a.date - b.date);
+  document.getElementById("cards").innerHTML = cards.map(c => card(c.kind, c.label, c.date, now)).join("");
+}
+render();
+
+// ---------- Moon calendar ----------
+const KIND = { new: "New Moon", first: "First Quarter", full: "Full Moon", last: "Last Quarter" };
+const SHORT = { new: "New", first: "1st Q", full: "Full", last: "Last Q" };
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const istKey = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: IST, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+const istDate = (y, m, d, h = 0, mi = 0) => new Date(Date.UTC(y, m, d, h, mi) - 330 * 60000); // IST = UTC+5:30
+function phaseName(lit, waxing) {
+  if (lit < 0.02) return "New Moon";
+  if (lit > 0.98) return "Full Moon";
+  if (Math.abs(lit - 0.5) < 0.04) return waxing ? "First Quarter" : "Last Quarter";
+  if (lit < 0.5) return waxing ? "Waxing Crescent" : "Waning Crescent";
+  return waxing ? "Waxing Gibbous" : "Waning Gibbous";
+}
+const nowIst = istKey(new Date()).split("-").map(Number);
+let calY = nowIst[0], calM = nowIst[1] - 1, selKey = istKey(new Date()), calDays = {};
+
+function renderCalendar() {
+  const first = istDate(calY, calM, 1), next = istDate(calY, calM + 1, 1);
+  const byDay = {};
+  for (const e of phasesBetween(first, next)) byDay[istKey(e.date)] = e;
+  const startDow = new Date(Date.UTC(calY, calM, 1)).getUTCDay();
+  const nDays = new Date(Date.UTC(calY, calM + 1, 0)).getUTCDate();
+  const todayKey = istKey(new Date());
+  document.getElementById("calTitle").textContent = `${MONTHS[calM]} ${calY}`;
+  const isThisMonth = todayKey.startsWith(`${calY}-${String(calM + 1).padStart(2, "0")}`);
+  document.getElementById("calToday").hidden = isThisMonth;
+  document.getElementById("calDows").innerHTML = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => `<div class="dow">${d}</div>`).join("");
+  let html = "";
+  for (let i = 0; i < startDow; i++) html += `<div class="blank"></div>`;
+  calDays = {};
+  for (let d = 1; d <= nDays; d++) {
+    const key = `${calY}-${String(calM + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const t = istDate(calY, calM, d, 20, 0); // the moon at 8 pm IST that evening
+    const lit = illumination(t), waxing = illumination(new Date(t.getTime() + 3 * 3600000)) > lit;
+    const ev = byDay[key];
+    calDays[key] = { d, lit, waxing, ev };
+    const cls = ["day", key === todayKey && "today", ev && "ev ev-" + ev.kind, key === selKey && "sel"].filter(Boolean).join(" ");
+    const tag = ev ? `<span class="tag">${SHORT[ev.kind]}<span class="t"> ${fmt(ev.date, { hour: "numeric", minute: "2-digit", hour12: true }).replace(" ", "")}</span></span>` : `<span class="tag"></span>`;
+    html += `<button type="button" class="${cls}" data-key="${key}" aria-label="${d} ${MONTHS[calM]}: ${ev ? KIND[ev.kind] : phaseName(lit, waxing)}"><span class="num">${d}</span><canvas class="mini" width="64" height="64"></canvas>${tag}</button>`;
+  }
+  for (let i = (startDow + nDays) % 7; i && i < 7; i++) html += `<div class="blank"></div>`; // fill the last week
+  const grid = document.getElementById("calGrid");
+  grid.innerHTML = html;
+  grid.querySelectorAll(".day").forEach((b) => {
+    const info = calDays[b.dataset.key];
+    MoonArt.draw(b.querySelector("canvas"), info.lit, info.waxing);
+  });
+  showDay(calDays[selKey] ? selKey : (Object.keys(byDay)[0] || `${calY}-${String(calM + 1).padStart(2, "0")}-01`));
+}
+
+function showDay(key) {
+  selKey = key;
+  document.querySelectorAll("#calGrid .day").forEach((b) => b.classList.toggle("sel", b.dataset.key === key));
+  const info = calDays[key];
+  if (!info) return;
+  const date = istDate(calY, calM, info.d, 12);
+  const dayTxt = fmt(date, { weekday: "long", day: "numeric", month: "long" });
+  const pct = Math.round(info.lit * 100);
+  document.getElementById("calInfo").innerHTML = info.ev
+    ? `<b>${dayTxt}</b> · <span class="nw">${KIND[info.ev.kind]}</span> <span class="nw">at ${fmt(info.ev.date, { hour: "numeric", minute: "2-digit", hour12: true })} IST</span>`
+    : `<b>${dayTxt}</b> · <span class="nw">${phaseName(info.lit, info.waxing)}</span> · <span class="nw">${pct}% lit at 8 pm</span>`;
+}
+
+document.getElementById("calGrid").addEventListener("click", (e) => {
+  const b = e.target.closest(".day"); if (b) showDay(b.dataset.key);
+});
+document.getElementById("calPrev").addEventListener("click", () => { calM--; if (calM < 0) { calM = 11; calY--; } renderCalendar(); });
+document.getElementById("calNext").addEventListener("click", () => { calM++; if (calM > 11) { calM = 0; calY++; } renderCalendar(); });
+document.getElementById("calToday").addEventListener("click", () => {
+  const p = istKey(new Date()).split("-").map(Number); calY = p[0]; calM = p[1] - 1; selKey = istKey(new Date()); renderCalendar();
+});
+renderCalendar();
+
+// Start the 3D globe after the first paint so the page shows instantly
+setTimeout(() => {
+  if (MoonGlobe.init(document.getElementById("globe"))) {
+    globeOn = true;
+    document.getElementById("moon").hidden = true;
+    document.getElementById("spin").hidden = false;
+    render();
+  }
+}, 30);
+const resetBtn = document.getElementById("reset");
+resetBtn.addEventListener("click", () => MoonGlobe.reset());
+setInterval(() => { resetBtn.hidden = !MoonGlobe.isTurned(); }, 250);
+updatePhoto(new Date()).then(render);
+setInterval(() => { render(); updatePhoto(new Date()); }, 30000);
+
+// ---------- Twinkling star field ----------
+(() => {
+  const cv = document.getElementById("sky"), ctx = cv.getContext("2d");
+  const still = false; // brightness-only twinkle, kept on for everyone
+  let stars = [], W = 0, H = 0, dpr = 1;
+  const tints = ["255,255,255", "255,255,255", "210,225,255", "255,240,215"];
+  function setup() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = window.innerWidth; H = Math.max(window.innerHeight, window.screen ? window.screen.height : 0) + 80;
+    cv.width = W * dpr; cv.height = H * dpr; cv.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.round((W * H) / 3200);
+    stars = Array.from({ length: n }, () => {
+      const big = Math.random() < 0.08;
+      return {
+        x: Math.random() * W, y: Math.random() * H,
+        r: big ? 1.1 + Math.random() * 0.9 : 0.4 + Math.random() * 0.7,
+        base: big ? 0.65 : 0.2 + Math.random() * 0.45,
+        amp: 0.75 + Math.random() * 0.25,
+        speed: 1.2 + Math.random() * 2.8,
+        phase: Math.random() * Math.PI * 2,
+        tint: tints[Math.floor(Math.random() * tints.length)],
+        big,
+      };
+    });
+  }
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    const s = t / 1000;
+    for (const st of stars) {
+      const v = (Math.sin(s * st.speed + st.phase) + 1) / 2;
+      const a = st.base * 0.25 + (1 - st.base * 0.25) * Math.pow(v, 3) * st.amp;
+      if (st.big) {
+        const g = ctx.createRadialGradient(st.x, st.y, 0, st.x, st.y, st.r * 5);
+        g.addColorStop(0, `rgba(${st.tint},${a * 0.6})`); g.addColorStop(1, `rgba(${st.tint},0)`);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(st.x, st.y, st.r * 5, 0, 7); ctx.fill();
+      }
+      ctx.fillStyle = `rgba(${st.tint},${a})`;
+      ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, 7); ctx.fill();
+      if (st.big && a > 0.6) { // sparkle glint at peak brightness
+        const L = st.r * 7 * (a - 0.5) * 2;
+        ctx.strokeStyle = `rgba(${st.tint},${(a - 0.6) * 1.5})`; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(st.x - L, st.y); ctx.lineTo(st.x + L, st.y);
+        ctx.moveTo(st.x, st.y - L); ctx.lineTo(st.x, st.y + L); ctx.stroke();
+      }
+    }
+    if (!still) requestAnimationFrame(draw);
+  }
+  setup(); requestAnimationFrame(draw);
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (window.innerWidth !== W || window.innerHeight > H) { setup(); if (still) draw(0); } }, 150); });
+})();
+</script>
+</body>
+</html>

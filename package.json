@@ -1,0 +1,24 @@
+{
+  "name": "moon-tonight",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Tonight's moon phase in IST, a 3D moon you can spin, and a moon calendar.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "0.128.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.128.0",
+    "astronomy-engine": "^2.1.19",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  }
+}

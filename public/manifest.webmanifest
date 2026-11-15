@@ -1,0 +1,14 @@
+{
+  "name": "Moon Tonight",
+  "short_name": "Moon Tonight",
+  "description": "Tonight's moon phase in IST, a 3D moon you can spin, and a moon calendar.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#04060b",
+  "theme_color": "#04060b",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
